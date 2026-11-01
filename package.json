@@ -1,0 +1,10 @@
+{
+  "name": "lawn-check",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Lawn Check: tells you whether your lawn needs water.",
+  "dependencies": {
+    "web-push": "^3.6.7"
+  }
+}
