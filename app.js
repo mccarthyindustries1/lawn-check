@@ -250,11 +250,19 @@ function makeSetupCode(subscription) {
   return btoa(bin);
 }
 
+// Waits for the background helper, but never forever.
+function helperReady(ms = 6000) {
+  return Promise.race([
+    navigator.serviceWorker.ready,
+    new Promise((resolve) => setTimeout(() => resolve(null), ms)),
+  ]);
+}
+
 async function currentSubscription() {
   if (!pushSupported()) return null;
   try {
-    const reg = await navigator.serviceWorker.ready;
-    return await reg.pushManager.getSubscription();
+    const reg = await helperReady(3000);
+    return reg ? await reg.pushManager.getSubscription() : null;
   } catch { return null; }
 }
 
@@ -264,6 +272,7 @@ async function renderAlerts() {
 }
 
 async function renderAlertsMain() {
+  alertsBody.innerHTML = "<p>Checking alerts…</p>";
   if (!pushSupported() || !standalone()) {
     alertsBody.innerHTML = `
       <p>To get a morning alert, open Lawn Check from your Home Screen first.</p>
@@ -302,7 +311,8 @@ function showSetupCode(sub) {
     catch { $("code").select(); $("alertMsg").textContent = "Press and hold the selected text, then tap Copy."; }
   });
   $("testBtn").addEventListener("click", async () => {
-    const reg = await navigator.serviceWorker.ready;
+    const reg = await helperReady(5000);
+    if (!reg) { $("alertMsg").textContent = "The background helper isn't running. Close and reopen the app, then try again."; return; }
     await reg.showNotification("Lawn Check", { body: "This is what your daily alert will look like.", icon: "icons/icon-192.png", tag: "lawn-test" });
   });
 }
@@ -315,7 +325,11 @@ async function enableAlerts() {
       msg.textContent = "Alerts are blocked. Turn them on in Settings > Notifications > Lawn Check, then try again.";
       return;
     }
-    const reg = await navigator.serviceWorker.ready;
+    const reg = await helperReady(10000);
+    if (!reg) {
+      msg.textContent = "The app's background helper isn't running yet. Close Lawn Check completely (swipe it up), open it again from the Home Screen, wait a few seconds, and tap Turn on alerts again.";
+      return;
+    }
     const sub = await reg.pushManager.subscribe({
       userVisibleOnly: true,
       applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),

@@ -1,10 +1,15 @@
 // Lawn Check service worker: shows the daily alert, and keeps the page openable offline.
-const CACHE = "lawn-check-v2";
+const CACHE = "lawn-check-v3";
 const SHELL = ["./", "index.html", "styles.css", "app.js", "advisor.js", "weather.js", "config.js", "log.js", "sync.js",
   "manifest.webmanifest", "icons/icon-192.png", "icons/icon-512.png", "icons/apple-touch-icon.png"];
 
 self.addEventListener("install", (event) => {
-  event.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL)).then(() => self.skipWaiting()));
+  // Save each file separately: one missing file must not stop the helper from starting.
+  event.waitUntil(
+    caches.open(CACHE)
+      .then((c) => Promise.allSettled(SHELL.map((url) => c.add(url))))
+      .then(() => self.skipWaiting())
+  );
 });
 
 self.addEventListener("activate", (event) => {
